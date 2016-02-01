@@ -1,5 +1,5 @@
 # Citrix Solutions Lab StoreFront Launcher Script
-Launch HDX session to a published resource through StoreFront or NetScaler Gateway (integrated with StoreFront)
+Launch Citrix HDX session to a published resource through StoreFront or NetScaler Gateway (integrated with StoreFront)
 
 ## Original Blog Posts
 https://www.citrix.com/blogs/2013/11/27/scripting-automating-the-launch-of-hdx-sessions-through-storefront-and-netscaler-gateway-integrated-with-storefront/
