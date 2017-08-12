@@ -1,7 +1,8 @@
-﻿<#
+<#
     .SYNOPSIS
         Launch HDX session to a published resource through StoreFront or NetScaler Gateway (integrated with StoreFront).
     .DESCRIPTION
+
         This script launches an HDX session to a published resource through StoreFront or NetScaler Gateway (integrated with StoreFront).
 
         It attempts to closely resemble what an actual user would do by:
@@ -10,7 +11,7 @@
         -Completing the fields.
         -Logging in.
         -Clicking on the resource.
-        -Logging off the StoreFront site.       
+        -Logging off the StoreFront site.
 
         Requirements:
         -Use an Administrator console of PowerShell.
@@ -48,7 +49,7 @@
 
         Description
         -----------
-        Launches a session to a resource using the parameters provided. 
+        Launches a session to a resource using the parameters provided.
     .LINK
         UserName format used in StoreFront.
         http://msdn.microsoft.com/en-us/library/windows/desktop/aa380525(v=vs.85).aspx#down_level_logon_name
@@ -70,7 +71,7 @@ Param (
     [Parameter(Mandatory=$true,Position=3)] [string]$ResourceName,
     [Parameter(Mandatory=$false)] [int]$SleepBeforeLogoff = 5,
     [Parameter(Mandatory=$false)] [int]$NumberOfRetries = 30,
-    [Parameter(Mandatory=$false)] [string]$LogFilePath = "$($env:SystemDrive)\Temp\",
+    [Parameter(Mandatory=$false)] [string]$LogFilePath = "$env:TEMP",
     [Parameter(Mandatory=$false)] [string]$LogFileName = "SFLauncher_$($UserName.Replace('\','_')).log",
     [Parameter(Mandatory=$false)] [switch]$NoLogFile,
     [Parameter(Mandatory=$false)] [switch]$NoConsoleOutput,
@@ -80,8 +81,8 @@ Param (
 Set-StrictMode -Version 2
 
 Set-Variable -Name NGLoginButtonId -Value "Log_On" -Option Constant -Scope Script
-Set-Variable -Name NGUserNameTextBoxName -Value "login" -Option Constant -Scope Script
-Set-Variable -Name NGPasswordTextBoxName -Value "passwd" -Option Constant -Scope Script
+Set-Variable -Name NGUserNameTextBoxName -Value "" -Scope Script
+Set-Variable -Name NGPasswordTextBoxName -Value "" -Scope Script
 Set-Variable -Name NGTwoFactorTextBoxName -Value "passwd1" -Option Constant -Scope Script
 
 Set-Variable -Name SFLoginButtonId -Value "loginBtn" -Option Constant -Scope Script
@@ -112,7 +113,7 @@ function Write-ToSFLauncherLog {
     Begin {
         if(Test-Path $LogFile -IsValid) {
             if(!(Test-Path "$LogFile" -PathType Leaf)) {
-                New-Item -Path $LogFile -ItemType "file" -Force -ErrorAction Stop | Out-Null			
+                New-Item -Path $LogFile -ItemType "file" -Force -ErrorAction Stop | Out-Null
             }
         } else {
             throw "Log file path is invalid"
@@ -124,7 +125,7 @@ function Write-ToSFLauncherLog {
         if (-not $NoConsoleOutput) {
             Write-Host $Message
         }
-              
+
         if (-not $NoLogFile) {
             $Message | Out-File -FilePath $LogFile -Append
         }
@@ -135,12 +136,12 @@ function Wait-ForPageReady {
     while ($internetExplorer.ReadyState -ne 4) {
         Write-ToSFLauncherLog "Internet Explorer: BUSY"
         Start-Sleep 1
-    }   
+    }
 }
 
 function Open-InternetExplorer {
     Param (
-        [Parameter(Mandatory=$true)] [string]$SiteURL    
+        [Parameter(Mandatory=$true)] [string]$SiteURL
     )
     Write-ToSFLauncherLog "Creating Internet Explorer COM object"
     New-Variable -Name internetExplorer -Value (New-Object -ComObject "InternetExplorer.Application") -Scope Script
@@ -178,13 +179,29 @@ function Test-LoginForm {
     } until ($try -gt $NumberOfRetries)
     if ($loginButton -eq $null -or $loginButton.GetType() -eq [DBNull]) {
         throw "Login button not found"
-    }    
+    }
 }
 
 function Submit-UserCredentials {
     if ($isNG) {
         Write-ToSFLauncherLog "Getting Login button"
         $loginButton = [System.__ComObject].InvokeMember(“getElementById”,[System.Reflection.BindingFlags]::InvokeMethod, $null, $document, $NGLoginButtonId)
+
+        Write-ToSFLauncherLog "Detecting textbox names"
+        $start = 0
+        $inputs = @([System.__ComObject].InvokeMember(“getElementsByTagName”,[System.Reflection.BindingFlags]::InvokeMethod, $null, $document, "Input"))
+        for($x = 0; $x -le $inputs.Length-1; $x++) {
+            if($inputs.GetValue($x).ID -cnotlike "dummy*" -and $inputs.GetValue($x).ID -cnotlike "Log*") {
+                switch($start) {
+                    0{Set-Variable -Name NGUserNameTextBoxName -Value $inputs.GetValue($x).Name -Scope Script}
+                    1{Set-Variable -Name NGPasswordTextBoxName -Value $inputs.GetValue($x).Name -Scope Script}
+                }
+                $start++
+            }
+        }
+        Write-ToSFLauncherLog "Detected UserName textbox name: $NGUsernameTextBoxName"
+        Write-ToSFLauncherLog "Detected Password textbox name: $NGPasswordTextBoxName"
+
         Write-ToSFLauncherLog "Getting UserName textbox"
         $userNameTextBox = @([System.__ComObject].InvokeMember(“getElementsByName”,[System.Reflection.BindingFlags]::InvokeMethod, $null, $document, $NGUserNameTextBoxName)) | where { $_.name -eq $NGUserNameTextBoxName }
         Write-ToSFLauncherLog "Getting Password textbox"
@@ -206,15 +223,15 @@ function Submit-UserCredentials {
         $userNameTextBox = [System.__ComObject].InvokeMember(“getElementById”,[System.Reflection.BindingFlags]::InvokeMethod, $null, $document, $SFUsernameTextBoxId)
         Write-ToSFLauncherLog "Getting Password textbox"
         $passwordTextBox = [System.__ComObject].InvokeMember(“getElementById”,[System.Reflection.BindingFlags]::InvokeMethod, $null, $document, $SFPasswordTextBoxId)
-    }            
-   
+    }
+
     if ($userNameTextBox -ne $null -and $userNameTextBox.GetType() -ne [DBNull]) {
         Write-ToSFLauncherLog "Setting UserName '$UserName'"
         $userNameTextBox.Value = $UserName
     } else {
         throw "UserName textbox not found"
     }
-    
+
     if ($passwordTextBox -ne $null -and $passwordTextBox.GetType() -ne [DBNull]) {
         Write-ToSFLauncherLog "Setting Password"
         $passwordTextBox.Value = $Password
@@ -275,11 +292,11 @@ function Start-Resource {
     Write-ToSFLauncherLog "Verifying that session launched..."
     $wficaFound = $false
     $try =1
-    do {     
+    do {
         $wficaAfter = @()
         Get-Process wfica32 -ErrorAction SilentlyContinue | select id | % { $wficaAfter += $_.id }
         $wficaComparison = Compare-Object $wficaBefore $wficaAfter -PassThru
-        
+
         if ($wficaComparison -ne $null) {
             foreach ($wfica in $wficaComparison) {
                 if ($wfica.SideIndicator -eq '=>') {
@@ -305,10 +322,10 @@ function Start-Resource {
 function Disconnect-User {
     Write-ToSFLauncherLog "Sleeping $SleepBeforeLogoff seconds before logging off..."
     Start-Sleep -Seconds $SleepBeforeLogoff
-    
+
     Write-ToSFLauncherLog "Getting log off link..."
     $try = 1
-    do {    
+    do {
         $logoffLink = [System.__ComObject].InvokeMember(“getElementById”,[System.Reflection.BindingFlags]::InvokeMethod, $null, $document, $SFLogOffLinkId)
         if ($logoffLink -ne $null -and $logoffLink.GetType() -ne [DBNull]) {
             Write-ToSFLauncherLog "Try #$try`: SUCCESS"
@@ -329,20 +346,20 @@ function Disconnect-User {
 
 try {
     Write-ToSFLauncherLog "*************** LAUNCHER SCRIPT BEGIN ***************"
-    
+
     Write-SFLauncherHeader
-    
+
     Open-InternetExplorer -SiteURL $SiteURL
-    
+
     Test-LoginForm
-    
+
     Submit-UserCredentials
-  
+
     Wait-ForPageReady
-    
+
     Start-Resource
 
-    Disconnect-User   
+    Disconnect-User
 }
 catch {
     Write-ToSFLauncherLog "Exception caught by script"
@@ -350,7 +367,7 @@ catch {
     $_.InvocationInfo.PositionMessage | Write-ToSFLauncherLog
     throw $_
 }
-finally {   
+finally {
     if ($internetExplorer -is [System.__ComObject]) {
         if ($internetExplorer | Get-Member 'Quit') {
             Write-ToSFLauncherLog "Quitting Internet Explorer"
@@ -361,4 +378,4 @@ finally {
         Remove-Variable -Name internetExplorer
     }
     Write-ToSFLauncherLog "***************  LAUNCHER SCRIPT END  ***************"
-} 
+}
