@@ -61,7 +61,7 @@
         http://support.citrix.com/proddocs/topic/dws-storefront-20/dws-configure-wr-workspace.html
     .NOTES
         Copyright (c) Citrix Systems, Inc. All rights reserved.
-        Version 1.1
+        Version 1.2
 #>
 
 Param (
