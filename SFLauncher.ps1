@@ -62,6 +62,8 @@
     .NOTES
         Copyright (c) Citrix Systems, Inc. All rights reserved.
         Version 1.2
+		
+		01/31/2017 Sam Jacobs added Get-LogoffLink as StoreFront 1811 uses a different id for the logoff link
 #>
 
 Param (
@@ -89,6 +91,9 @@ Set-Variable -Name SFLoginButtonId -Value "loginBtn" -Option Constant -Scope Scr
 Set-Variable -Name SFUsernameTextBoxId -Value "username" -Option Constant -Scope Script
 Set-Variable -Name SFPasswordTextBoxId -Value "password" -Option Constant -Scope Script
 Set-Variable -Name SFLogOffLinkId -Value "userdetails-logoff" -Option Constant -Scope Script
+
+# logoff link ID changed for StoreFront 1811
+Set-Variable -Name SF1811LogOffLinkId -Value "dropdownLogOffBtn" -Option Constant -Scope Script
 
 function Write-SFLauncherHeader {
     $infoMessage = @"
@@ -247,11 +252,20 @@ function Submit-UserCredentials {
     }
 }
 
+function Get-LogoffLink {
+    # the logoff link has been changed for StoreFront 1811 - try the alternate link if the original not found
+    $logoffLink = [System.__ComObject].InvokeMember(“getElementById”,[System.Reflection.BindingFlags]::InvokeMethod, $null, $document, $SFLogOffLinkId)
+    if ($logoffLink -eq $null -or $logoffLink.GetType() -eq [DBNull]) {
+            $logoffLink = [System.__ComObject].InvokeMember(“getElementById”,[System.Reflection.BindingFlags]::InvokeMethod, $null, $document, $SF1811LogOffLinkId)
+    }
+    $logoffLink
+}
+
 function Start-Resource {
     Write-ToSFLauncherLog "Getting SF resources page..."
     $try = 1
     do {
-        $logoffLink = [System.__ComObject].InvokeMember(“getElementById”,[System.Reflection.BindingFlags]::InvokeMethod, $null, $document, $SFLogOffLinkId)
+        $logoffLink = Get-LogoffLink
         if ($logoffLink -ne $null -and $logoffLink.GetType() -ne [DBNull]) {
             Write-ToSFLauncherLog "Try #$try`: SUCCESS"
             break
@@ -326,7 +340,7 @@ function Disconnect-User {
     Write-ToSFLauncherLog "Getting log off link..."
     $try = 1
     do {
-        $logoffLink = [System.__ComObject].InvokeMember(“getElementById”,[System.Reflection.BindingFlags]::InvokeMethod, $null, $document, $SFLogOffLinkId)
+        $logoffLink = Get-LogoffLink
         if ($logoffLink -ne $null -and $logoffLink.GetType() -ne [DBNull]) {
             Write-ToSFLauncherLog "Try #$try`: SUCCESS"
             break
