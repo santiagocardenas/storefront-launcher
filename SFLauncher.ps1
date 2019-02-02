@@ -61,9 +61,7 @@
         http://support.citrix.com/proddocs/topic/dws-storefront-20/dws-configure-wr-workspace.html
     .NOTES
         Copyright (c) Citrix Systems, Inc. All rights reserved.
-        Version 1.2
-		
-		01/31/2017 Sam Jacobs added Get-LogoffLink as StoreFront 1811 uses a different id for the logoff link
+        Version 1.3
 #>
 
 Param (
